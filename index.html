@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NETECH - إدارة الاشتراكات</title>
+    
+    <!-- إضافة Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    
     <style>
         :root {
             --primary-color: #3498db;
@@ -343,6 +349,68 @@
             min-width: 100px;
         }
         
+        /* قسم تسجيل الدخول */
+        .auth-section {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .auth-section h3 {
+            color: #495057;
+            margin-bottom: 15px;
+        }
+        
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .user-info {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        
+        .sync-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #6c757d;
+        }
+        
+        .sync-indicator.syncing {
+            background-color: #ffc107;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .sync-indicator.synced {
+            background-color: #28a745;
+        }
+        
+        .sync-indicator.error {
+            background-color: #dc3545;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
         @media (max-width: 768px) {
             form {
                 grid-template-columns: 1fr;
@@ -384,12 +452,37 @@
             .small-button {
                 width: 100% !important;
             }
+            
+            .auth-buttons {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>إدارة اشتراكات الزبائن - <span class="company-name">NETECH</span></h1>
+        
+        <!-- قسم المصادقة -->
+        <div class="auth-section">
+            <h3>🔐 تسجيل الدخول والمزامنة السحابية</h3>
+            <div id="userInfo" class="user-info" style="display: none;">
+                <p>مرحباً، <span id="userEmail"></span></p>
+                <button onclick="logout()" class="danger small-button">تسجيل الخروج</button>
+            </div>
+            <div id="loginSection">
+                <p>سجل الدخول لمزامنة بياناتك على جميع أجهزتك:</p>
+                <div class="auth-buttons">
+                    <button onclick="loginWithGoogle()" class="secondary">تسجيل الدخول بحساب جوجل</button>
+                    <button onclick="loginWithEmail()" class="secondary">تسجيل الدخول بالبريد الإلكتروني</button>
+                    <button onclick="signupWithEmail()" class="primary">إنشاء حساب جديد</button>
+                </div>
+            </div>
+            <div class="sync-status">
+                <div id="syncIndicator" class="sync-indicator"></div>
+                <span id="syncStatusText">جاري التحميل...</span>
+            </div>
+        </div>
 
         <div class="form-section">
             <h2>إضافة / تعديل زبون</h2>
@@ -523,6 +616,7 @@
                 <button onclick="exportData()" class="success">📥 تصدير البيانات</button>
                 <button onclick="importData()" class="secondary">📤 استيراد البيانات</button>
                 <button onclick="clearAllData()" class="danger">🗑️ مسح كل البيانات</button>
+                <button onclick="forceSync()" class="primary">🔄 مزامنة فورية</button>
             </div>
             <p style="font-size: 14px; color: #666; margin-top: 15px;">
                 ⚠️ <strong>هام:</strong> احفظ نسخة احتياطية من بياناتك بانتظام لتجنب فقدانها!
@@ -576,6 +670,22 @@
     <div id="notification" class="notification"></div>
 
     <script>
+        // تهيئة Firebase
+        const firebaseConfig = {
+            // هنا يجب وضع إعدادات Firebase الخاصة بك
+            apiKey: "your-api-key",
+            authDomain: "your-project.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "your-app-id"
+        };
+
+        // تهيئة Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
         // بيانات التطبيق
         let customers = JSON.parse(localStorage.getItem('customers')) || [];
         let subscriptionNames = JSON.parse(localStorage.getItem('subscriptionNames')) || [
@@ -587,6 +697,8 @@
             "باقة العائلة"
         ];
         let editingCustomerId = null;
+        let currentUser = null;
+        let isOnline = false;
 
         // عناصر DOM
         const customerForm = document.getElementById('customerForm');
@@ -607,6 +719,11 @@
         const notification = document.getElementById('notification');
         const subscriptionList = document.getElementById('subscriptionList');
         const newSubscriptionNameInput = document.getElementById('newSubscriptionName');
+        const userInfo = document.getElementById('userInfo');
+        const userEmail = document.getElementById('userEmail');
+        const loginSection = document.getElementById('loginSection');
+        const syncIndicator = document.getElementById('syncIndicator');
+        const syncStatusText = document.getElementById('syncStatusText');
 
         // رسائل باللغات المختلفة
         const messages = {
@@ -677,33 +794,225 @@ NETECH - עובדים עבורך!`
             renderCalendar();
             checkAutoReminders();
             
-            // محاولة تحميل البيانات من السحابة إذا كانت متاحة
-            loadFromCloud();
+            // مراقبة حالة الاتصال
+            checkConnectionStatus();
+            
+            // مراقبة حالة المصادقة
+            auth.onAuthStateChanged(handleAuthStateChanged);
         });
 
-        // ========== إصلاح زر إضافة أسماء الاشتراكات ==========
-        function addSubscriptionName() {
-            const newName = newSubscriptionNameInput.value.trim();
+        // ========== دوال المصادقة ==========
+        
+        function handleAuthStateChanged(user) {
+            currentUser = user;
             
-            if (!newName) {
-                showNotification('يرجى إدخال اسم الاشتراك', 'error');
-                return;
+            if (user) {
+                // المستخدم مسجل الدخول
+                userEmail.textContent = user.email;
+                userInfo.style.display = 'block';
+                loginSection.style.display = 'none';
+                
+                // تحميل البيانات من السحابة
+                loadFromCloud();
+            } else {
+                // المستخدم غير مسجل الدخول
+                userInfo.style.display = 'none';
+                loginSection.style.display = 'block';
+                updateSyncStatus('غير متصل', 'error');
             }
-            
-            if (subscriptionNames.includes(newName)) {
-                showNotification('اسم الاشتراك موجود مسبقاً', 'error');
-                return;
-            }
-            
-            subscriptionNames.push(newName);
-            saveSubscriptionNamesToStorage();
-            saveToCloud(); // حفظ في السحابة
-            renderSubscriptionNames();
-            newSubscriptionNameInput.value = '';
-            showNotification('تم إضافة اسم الاشتراك بنجاح', 'success');
         }
 
-        // ========== وظائف النسخ الاحتياطي ==========
+        function loginWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    showNotification('تم تسجيل الدخول بنجاح', 'success');
+                })
+                .catch((error) => {
+                    console.error('خطأ في تسجيل الدخول:', error);
+                    showNotification('فشل تسجيل الدخول', 'error');
+                });
+        }
+
+        function loginWithEmail() {
+            const email = prompt('أدخل بريدك الإلكتروني:');
+            if (!email) return;
+            
+            const password = prompt('أدخل كلمة المرور:');
+            if (!password) return;
+            
+            auth.signInWithEmailAndPassword(email, password)
+                .then((result) => {
+                    showNotification('تم تسجيل الدخول بنجاح', 'success');
+                })
+                .catch((error) => {
+                    console.error('خطأ في تسجيل الدخول:', error);
+                    showNotification('فشل تسجيل الدخول', 'error');
+                });
+        }
+
+        function signupWithEmail() {
+            const email = prompt('أدخل بريدك الإلكتروني:');
+            if (!email) return;
+            
+            const password = prompt('أدخل كلمة المرور (6 أحرف على الأقل):');
+            if (!password || password.length < 6) {
+                showNotification('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
+                return;
+            }
+            
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((result) => {
+                    showNotification('تم إنشاء الحساب بنجاح', 'success');
+                })
+                .catch((error) => {
+                    console.error('خطأ في إنشاء الحساب:', error);
+                    showNotification('فشل إنشاء الحساب', 'error');
+                });
+        }
+
+        function logout() {
+            if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+                auth.signOut()
+                    .then(() => {
+                        showNotification('تم تسجيل الخروج بنجاح', 'success');
+                    })
+                    .catch((error) => {
+                        console.error('خطأ في تسجيل الخروج:', error);
+                        showNotification('فشل تسجيل الخروج', 'error');
+                    });
+            }
+        }
+
+        // ========== دوال المزامنة السحابية ==========
+        
+        function updateSyncStatus(message, status) {
+            syncStatusText.textContent = message;
+            syncIndicator.className = 'sync-indicator';
+            
+            if (status === 'syncing') {
+                syncIndicator.classList.add('syncing');
+            } else if (status === 'synced') {
+                syncIndicator.classList.add('synced');
+            } else if (status === 'error') {
+                syncIndicator.classList.add('error');
+            }
+        }
+
+        function checkConnectionStatus() {
+            isOnline = navigator.onLine;
+            
+            if (isOnline && currentUser) {
+                updateSyncStatus('متصل - متزامن', 'synced');
+            } else if (!isOnline) {
+                updateSyncStatus('غير متصل بالإنترنت', 'error');
+            } else {
+                updateSyncStatus('غير متصل', 'error');
+            }
+            
+            // مراقبة تغييرات حالة الاتصال
+            window.addEventListener('online', function() {
+                isOnline = true;
+                if (currentUser) {
+                    updateSyncStatus('متصل - متزامن', 'synced');
+                    syncWithCloud();
+                }
+            });
+            
+            window.addEventListener('offline', function() {
+                isOnline = false;
+                updateSyncStatus('غير متصل بالإنترنت', 'error');
+            });
+        }
+
+        function saveToCloud() {
+            if (!currentUser || !isOnline) return;
+            
+            updateSyncStatus('جاري المزامنة...', 'syncing');
+            
+            const userData = {
+                customers: customers,
+                subscriptionNames: subscriptionNames,
+                lastUpdate: firebase.firestore.FieldValue.serverTimestamp(),
+                userId: currentUser.uid
+            };
+            
+            db.collection('userData').doc(currentUser.uid).set(userData)
+                .then(() => {
+                    updateSyncStatus('متصل - متزامن', 'synced');
+                })
+                .catch((error) => {
+                    console.error('خطأ في الحفظ السحابي:', error);
+                    updateSyncStatus('خطأ في المزامنة', 'error');
+                });
+        }
+
+        function loadFromCloud() {
+            if (!currentUser || !isOnline) {
+                updateSyncStatus('غير متصل', 'error');
+                return;
+            }
+            
+            updateSyncStatus('جاري تحميل البيانات...', 'syncing');
+            
+            db.collection('userData').doc(currentUser.uid).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        
+                        if (data.customers && data.subscriptionNames) {
+                            customers = data.customers;
+                            subscriptionNames = data.subscriptionNames;
+                            
+                            saveCustomersToStorage();
+                            saveSubscriptionNamesToStorage();
+                            renderCustomersTable();
+                            renderCalendar();
+                            renderSubscriptionNames();
+                            
+                            updateSyncStatus('متصل - متزامن', 'synced');
+                            showNotification('تم تحميل البيانات من السحابة', 'success');
+                        }
+                    } else {
+                        // لا توجد بيانات في السحابة، نقوم بحفظ البيانات المحلية
+                        saveToCloud();
+                    }
+                })
+                .catch((error) => {
+                    console.error('خطأ في تحميل البيانات السحابية:', error);
+                    updateSyncStatus('خطأ في التحميل', 'error');
+                });
+        }
+
+        function forceSync() {
+            if (!currentUser) {
+                showNotification('يجب تسجيل الدخول أولاً', 'error');
+                return;
+            }
+            
+            if (!isOnline) {
+                showNotification('غير متصل بالإنترنت', 'error');
+                return;
+            }
+            
+            saveToCloud();
+        }
+
+        function syncWithCloud() {
+            if (currentUser && isOnline) {
+                // مقارنة التواريخ لمعرفة أي البيانات أحدث
+                const localLastUpdate = localStorage.getItem('lastUpdate');
+                
+                if (localLastUpdate) {
+                    // في تطبيق حقيقي، يمكن إضافة منطق أكثر تعقيداً للمزامنة
+                    saveToCloud();
+                } else {
+                    loadFromCloud();
+                }
+            }
+        }
+
+        // ========== دوال النسخ الاحتياطي ==========
         
         function exportData() {
             const data = {
@@ -811,6 +1120,27 @@ NETECH - עובדים עבורך!`
             });
         }
 
+        function addSubscriptionName() {
+            const newName = newSubscriptionNameInput.value.trim();
+            
+            if (!newName) {
+                showNotification('يرجى إدخال اسم الاشتراك', 'error');
+                return;
+            }
+            
+            if (subscriptionNames.includes(newName)) {
+                showNotification('اسم الاشتراك موجود مسبقاً', 'error');
+                return;
+            }
+            
+            subscriptionNames.push(newName);
+            saveSubscriptionNamesToStorage();
+            saveToCloud(); // حفظ في السحابة
+            renderSubscriptionNames();
+            newSubscriptionNameInput.value = '';
+            showNotification('تم إضافة اسم الاشتراك بنجاح', 'success');
+        }
+
         function removeSubscriptionName(index) {
             if (confirm('هل أنت متأكد من حذف هذا الاشتراك؟')) {
                 subscriptionNames.splice(index, 1);
@@ -889,6 +1219,7 @@ NETECH - עובדים עבורך!`
         function saveCustomersToStorage() {
             try {
                 localStorage.setItem('customers', JSON.stringify(customers));
+                localStorage.setItem('lastUpdate', new Date().toISOString());
             } catch (error) {
                 console.error('خطأ في حفظ البيانات:', error);
                 showNotification('خطأ في حفظ البيانات', 'error');
@@ -1221,111 +1552,6 @@ NETECH - עובדים עבורך!`
             setTimeout(() => {
                 notification.classList.remove('show');
             }, 3000);
-        }
-
-        // ========== دوال التخزين السحابي ==========
-        
-        function saveToCloud() {
-            try {
-                const data = {
-                    customers: customers,
-                    subscriptionNames: subscriptionNames,
-                    lastUpdate: new Date().toISOString()
-                };
-                
-                // استخدام localStorage كبديل للتخزين السحابي
-                // في بيئة حقيقية، يمكن استبدال هذا باستدعاء API
-                localStorage.setItem('netech_cloud_backup', JSON.stringify(data));
-                
-                // يمكنك أيضاً استخدام IndexedDB لتخزين كميات أكبر من البيانات
-                if ('indexedDB' in window) {
-                    saveToIndexedDB(data);
-                }
-                
-            } catch (error) {
-                console.error('خطأ في الحفظ السحابي:', error);
-            }
-        }
-
-        function loadFromCloud() {
-            try {
-                // محاولة تحميل من localStorage أولاً
-                const cloudData = localStorage.getItem('netech_cloud_backup');
-                if (cloudData) {
-                    const data = JSON.parse(cloudData);
-                    
-                    if (data.customers && data.subscriptionNames) {
-                        customers = data.customers;
-                        subscriptionNames = data.subscriptionNames;
-                        
-                        saveCustomersToStorage();
-                        saveSubscriptionNamesToStorage();
-                        renderCustomersTable();
-                        renderCalendar();
-                        renderSubscriptionNames();
-                        
-                        showNotification('تم تحميل البيانات من النسخة الاحتياطية', 'success');
-                    }
-                }
-                
-                // محاولة تحميل من IndexedDB إذا كان متاحاً
-                if ('indexedDB' in window) {
-                    loadFromIndexedDB();
-                }
-                
-            } catch (error) {
-                console.error('خطأ في تحميل البيانات السحابية:', error);
-            }
-        }
-
-        function saveToIndexedDB(data) {
-            const request = indexedDB.open('NetechDB', 1);
-            
-            request.onerror = function(event) {
-                console.error('خطأ في فتح قاعدة البيانات:', event);
-            };
-            
-            request.onsuccess = function(event) {
-                const db = event.target.result;
-                const transaction = db.transaction(['data'], 'readwrite');
-                const store = transaction.objectStore('data');
-                
-                store.put(data, 'netech_data');
-            };
-            
-            request.onupgradeneeded = function(event) {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains('data')) {
-                    db.createObjectStore('data');
-                }
-            };
-        }
-
-        function loadFromIndexedDB() {
-            const request = indexedDB.open('NetechDB', 1);
-            
-            request.onsuccess = function(event) {
-                const db = event.target.result;
-                const transaction = db.transaction(['data'], 'readonly');
-                const store = transaction.objectStore('data');
-                const getRequest = store.get('netech_data');
-                
-                getRequest.onsuccess = function() {
-                    if (getRequest.result) {
-                        const data = getRequest.result;
-                        if (data.customers && data.subscriptionNames) {
-                            customers = data.customers;
-                            subscriptionNames = data.subscriptionNames;
-                            
-                            saveCustomersToStorage();
-                            saveSubscriptionNamesToStorage();
-                            renderCustomersTable();
-                            renderCalendar();
-                            renderSubscriptionNames();
-                        }
-                    }
-                };
-            };
         }
     </script>
 </body>
