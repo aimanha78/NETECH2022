@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NETECH - إدارة الاشتراكات</title>
     <style>
-        /* كل الـ CSS السابق يبقى كما هو */
         :root {
             --primary-color: #3498db;
             --secondary-color: #2c3e50;
@@ -485,7 +484,6 @@
         <div class="subscription-management">
             <h3>إدارة أسماء الاشتراكات</h3>
             <div class="subscription-list" id="subscriptionList">
-                <!-- سيتم ملء قائمة الاشتراكات هنا -->
             </div>
             <div style="display: flex; gap: 10px; margin-top: 15px;">
                 <input type="text" id="newSubscriptionName" placeholder="اسم الاشتراك الجديد" style="flex: 1;">
@@ -493,7 +491,6 @@
             </div>
         </div>
 
-        <!-- قسم النسخ الاحتياطي الجديد -->
         <div class="backup-section">
             <h3>📁 النسخ الاحتياطي للبيانات</h3>
             <div class="backup-buttons">
@@ -658,7 +655,6 @@ NETECH - עובדים עבורך!`
         // ========== إصلاح زر إضافة أسماء الاشتراكات ==========
         function addSubscriptionName() {
             const newName = newSubscriptionNameInput.value.trim();
-            console.log('محاولة إضافة اشتراك جديد:', newName); // للتصحيح
             
             if (!newName) {
                 showNotification('يرجى إدخال اسم الاشتراك', 'error');
@@ -677,9 +673,8 @@ NETECH - עובדים עבורך!`
             showNotification('تم إضافة اسم الاشتراك بنجاح', 'success');
         }
 
-        // ========== وظائف النسخ الاحتياطي الجديدة ==========
+        // ========== وظائف النسخ الاحتياطي ==========
         
-        // تصدير البيانات
         function exportData() {
             const data = {
                 customers: customers,
@@ -702,12 +697,10 @@ NETECH - עובדים עבורך!`
             showNotification('تم تصدير البيانات بنجاح', 'success');
         }
 
-        // استيراد البيانات
         function importData() {
             document.getElementById('importFile').click();
         }
 
-        // معالجة استيراد الملف
         function handleFileImport(file) {
             if (!file) return;
             
@@ -716,7 +709,6 @@ NETECH - עובדים עבורך!`
                 try {
                     const data = JSON.parse(e.target.result);
                     
-                    // التحقق من صحة البيانات
                     if (!data.customers || !data.subscriptionNames) {
                         throw new Error('ملف غير صالح');
                     }
@@ -734,22 +726,20 @@ NETECH - עובדים עבורך!`
                         showNotification('تم استيراد البيانات بنجاح', 'success');
                     }
                 } catch (error) {
-                    console.error('خطأ في استيراد البيانات:', error);
                     showNotification('خطأ في استيراد الملف. تأكد من صحة الملف.', 'error');
                 }
             };
             reader.readAsText(file);
         }
 
-        // مسح كل البيانات
         function clearAllData() {
             if (confirm('⚠️ تحذير: هل أنت متأكد من مسح كل البيانات؟ لا يمكن التراجع عن هذا الإجراء!')) {
                 if (confirm('❌ تأكيد نهائي: سيتم حذف جميع الزبائن وأسماء الاشتراكات!')) {
                     customers = [];
                     subscriptionNames = [
-                        "باقة الإنترنت الأساسية",
-                        "باقة الإنترنت المتقدمة", 
-                        "باقة الإنترنت المميزة",
+                        "PAL IPTV",
+                        "PAL SAT", 
+                        "IPHONE",
                         "باقة الألعاب",
                         "باقة العمل",
                         "باقة العائلة"
@@ -766,9 +756,8 @@ NETECH - עובדים עבורך!`
             }
         }
 
-        // ========== باقي الدوال تبقى كما هي ==========
+        // ========== دوال إدارة الاشتراكات ==========
         
-        // عرض أسماء الاشتراكات
         function renderSubscriptionNames() {
             subscriptionNameSelect.innerHTML = '<option value="">اختر اسم الاشتراك</option>';
             subscriptionNames.forEach(name => {
@@ -790,7 +779,6 @@ NETECH - עובדים עבורך!`
             });
         }
 
-        // حذف اسم اشتراك
         function removeSubscriptionName(index) {
             if (confirm('هل أنت متأكد من حذف هذا الاشتراك؟')) {
                 subscriptionNames.splice(index, 1);
@@ -800,7 +788,6 @@ NETECH - עובדים עבורך!`
             }
         }
 
-        // حفظ أسماء الاشتراكات
         function saveSubscriptionNamesToStorage() {
             try {
                 localStorage.setItem('subscriptionNames', JSON.stringify(subscriptionNames));
@@ -809,7 +796,8 @@ NETECH - עובדים עבורך!`
             }
         }
 
-        // معالجة إرسال النموذج
+        // ========== دوال إدارة الزبائن ==========
+        
         function handleFormSubmit(e) {
             e.preventDefault();
             
@@ -854,7 +842,6 @@ NETECH - עובדים עבורך!`
             clearForm();
         }
 
-        // مسح النموذج
         function clearForm() {
             customerForm.reset();
             customerIdInput.value = '';
@@ -865,7 +852,6 @@ NETECH - עובדים עבורך!`
             countryCodeSelect.value = '+972';
         }
 
-        // حفظ البيانات
         function saveCustomersToStorage() {
             try {
                 localStorage.setItem('customers', JSON.stringify(customers));
@@ -875,7 +861,6 @@ NETECH - עובדים עבורך!`
             }
         }
 
-        // عرض جدول الزبائن
         function renderCustomersTable(filteredCustomers = null) {
             const customersToRender = filteredCustomers || customers;
             
@@ -926,9 +911,278 @@ NETECH - עובדים עבורך!`
             });
         }
 
-        // باقي الدوال تبقى كما هي...
-        // [يتبع باقي الكود بدون تغيير]
+        function filterCustomers() {
+            const searchTerm = searchBar.value.toLowerCase();
+            const filteredCustomers = customers.filter(customer => 
+                customer.name.toLowerCase().includes(searchTerm) || 
+                customer.phone.includes(searchTerm) ||
+                (customer.country && customer.country.toLowerCase().includes(searchTerm)) ||
+                (customer.subscriptionName && customer.subscriptionName.toLowerCase().includes(searchTerm))
+            );
+            renderCustomersTable(filteredCustomers);
+        }
+
+        function editCustomer(id) {
+            const customer = customers.find(c => c.id === id);
+            if (customer) {
+                customerIdInput.value = customer.id;
+                customerNameInput.value = customer.name;
+                
+                if (customer.countryCode && customer.phoneNumber) {
+                    countryCodeSelect.value = customer.countryCode;
+                    phoneNumberInput.value = customer.phoneNumber;
+                } else {
+                    const phoneParts = customer.phone.match(/^(\+\d+)(\d+)$/);
+                    if (phoneParts) {
+                        countryCodeSelect.value = phoneParts[1];
+                        phoneNumberInput.value = phoneParts[2];
+                    } else {
+                        countryCodeSelect.value = '+972';
+                        phoneNumberInput.value = customer.phone.replace(/^\+\d+/, '');
+                    }
+                }
+                
+                countryInput.value = customer.country || '';
+                subscriptionNameSelect.value = customer.subscriptionName || '';
+                startDateInput.value = customer.startDate;
+                subscriptionTypeSelect.value = customer.subscriptionType;
+                languageSelect.value = customer.language;
+                
+                editingCustomerId = id;
+                saveCustomerBtn.textContent = 'تحديث الزبون';
+                
+                document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function deleteCustomer(id) {
+            if (confirm('هل أنت متأكد من حذف هذا الزبون؟')) {
+                customers = customers.filter(c => c.id !== id);
+                saveCustomersToStorage();
+                renderCustomersTable();
+                renderCalendar();
+                showNotification('تم حذف الزبون بنجاح', 'success');
+            }
+        }
+
+        function renewSubscription(id) {
+            const customer = customers.find(c => c.id === id);
+            if (customer) {
+                const today = new Date().toISOString().split('T')[0];
+                customer.startDate = today;
+                
+                saveCustomersToStorage();
+                renderCustomersTable();
+                renderCalendar();
+                showNotification('تم تجديد الاشتراك بنجاح', 'success');
+            }
+        }
+
+        function toggleReminder(id, type, value) {
+            const customer = customers.find(c => c.id === id);
+            if (customer) {
+                customer[type] = value;
+                saveCustomersToStorage();
+                showNotification('تم تحديث إعدادات التذكير', 'success');
+            }
+        }
+
+        // ========== دوال الرسائل والتذكيرات ==========
         
+        function sendWhatsAppMessage(customerId) {
+            const customer = customers.find(c => c.id === customerId);
+            if (customer) {
+                const endDate = calculateEndDate(customer.startDate, customer.subscriptionType);
+                const daysRemaining = calculateDaysRemaining(endDate);
+                const formattedEndDate = formatDate(endDate);
+                
+                const message = messages[customer.language].manual(
+                    customer.name, 
+                    customer.subscriptionName || 'الاشتراك',
+                    daysRemaining, 
+                    formattedEndDate
+                );
+                const whatsappUrl = `https://wa.me/${customer.phone}?text=${encodeURIComponent(message)}`;
+                
+                window.open(whatsappUrl, '_blank');
+            }
+        }
+
+        function checkAutoReminders() {
+            const today = new Date().toISOString().split('T')[0];
+            
+            customers.forEach(customer => {
+                if (!customer.weeklyReminder && !customer.dailyReminder) return;
+                
+                const endDate = calculateEndDate(customer.startDate, customer.subscriptionType);
+                const daysRemaining = calculateDaysRemaining(endDate);
+                const formattedEndDate = formatDate(endDate);
+                
+                if (customer.weeklyReminder && daysRemaining === 7 && customer.lastWeeklyReminder !== today) {
+                    const message = messages[customer.language].weekly(
+                        customer.name,
+                        customer.subscriptionName || 'الاشتراك',
+                        daysRemaining,
+                        formattedEndDate
+                    );
+                    sendAutoReminder(customer, 'أسبوعي', message);
+                    customer.lastWeeklyReminder = today;
+                }
+                
+                if (customer.dailyReminder && daysRemaining === 1 && customer.lastDailyReminder !== today) {
+                    const message = messages[customer.language].daily(
+                        customer.name,
+                        customer.subscriptionName || 'الاشتراك',
+                        daysRemaining,
+                        formattedEndDate
+                    );
+                    sendAutoReminder(customer, 'يومي', message);
+                    customer.lastDailyReminder = today;
+                }
+            });
+            
+            saveCustomersToStorage();
+        }
+
+        function sendAutoReminder(customer, type, message) {
+            showNotification(`تم إرسال تذكير ${type} إلى ${customer.name}`, 'success');
+        }
+
+        function sendManualReminders() {
+            let remindersSent = 0;
+            const today = new Date().toISOString().split('T')[0];
+            
+            customers.forEach(customer => {
+                const endDate = calculateEndDate(customer.startDate, customer.subscriptionType);
+                const daysRemaining = calculateDaysRemaining(endDate);
+                const formattedEndDate = formatDate(endDate);
+                
+                if (daysRemaining <= 7 && customer.weeklyReminder) {
+                    const message = messages[customer.language].weekly(
+                        customer.name,
+                        customer.subscriptionName || 'الاشتراك',
+                        daysRemaining,
+                        formattedEndDate
+                    );
+                    sendAutoReminder(customer, 'أسبوعي', message);
+                    customer.lastWeeklyReminder = today;
+                    remindersSent++;
+                }
+                
+                if (daysRemaining <= 1 && customer.dailyReminder) {
+                    const message = messages[customer.language].daily(
+                        customer.name,
+                        customer.subscriptionName || 'الاشتراك',
+                        daysRemaining,
+                        formattedEndDate
+                    );
+                    sendAutoReminder(customer, 'يومي', message);
+                    customer.lastDailyReminder = today;
+                    remindersSent++;
+                }
+            });
+            
+            saveCustomersToStorage();
+            showNotification(`تم إرسال ${remindersSent} تذكير`, 'success');
+        }
+
+        // ========== دوال التقويم والحسابات ==========
+        
+        function renderCalendar() {
+            calendarDisplay.innerHTML = '';
+            
+            const today = new Date();
+            const next30Days = [];
+            
+            for (let i = 0; i < 30; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                next30Days.push(date.toISOString().split('T')[0]);
+            }
+            
+            next30Days.forEach(date => {
+                const customersEnding = customers.filter(customer => {
+                    const endDate = calculateEndDate(customer.startDate, customer.subscriptionType);
+                    return endDate === date;
+                });
+                
+                if (customersEnding.length > 0) {
+                    const dayElement = document.createElement('div');
+                    dayElement.className = 'calendar-day';
+                    
+                    const dayTitle = document.createElement('h3');
+                    dayTitle.textContent = formatDate(date);
+                    dayElement.appendChild(dayTitle);
+                    
+                    customersEnding.forEach(customer => {
+                        const customerElement = document.createElement('div');
+                        customerElement.className = 'customer-item';
+                        customerElement.innerHTML = `
+                            <span>${customer.name} - ${customer.subscriptionName || ''}</span>
+                            <button onclick="sendWhatsAppMessage('${customer.id}')" class="whatsapp" style="padding: 4px 8px; font-size: 12px;">إرسال</button>
+                        `;
+                        dayElement.appendChild(customerElement);
+                    });
+                    
+                    calendarDisplay.appendChild(dayElement);
+                }
+            });
+            
+            if (calendarDisplay.children.length === 0) {
+                calendarDisplay.innerHTML = '<p>لا توجد اشتراكات تنتهي خلال الـ 30 يوم القادمة</p>';
+            }
+        }
+
+        function calculateEndDate(startDate, subscriptionType) {
+            const start = new Date(startDate);
+            let monthsToAdd = 0;
+            
+            switch(subscriptionType) {
+                case 'شهري': monthsToAdd = 1; break;
+                case '3 أشهر': monthsToAdd = 3; break;
+                case '6 أشهر': monthsToAdd = 6; break;
+                case 'سنوي': monthsToAdd = 12; break;
+                case '5 سنوات': monthsToAdd = 60; break;
+                default: monthsToAdd = 0;
+            }
+            
+            const endDate = new Date(start);
+            endDate.setMonth(start.getMonth() + monthsToAdd);
+            
+            return endDate.toISOString().split('T')[0];
+        }
+
+        function calculateDaysRemaining(endDate) {
+            const today = new Date();
+            const end = new Date(endDate);
+            const timeDiff = end.getTime() - today.getTime();
+            const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+            
+            return daysDiff >= 0 ? daysDiff : 0;
+        }
+
+        function getDaysRemainingClass(days) {
+            if (days <= 7) return 'days-warning';
+            if (days <= 30) return 'days-alert';
+            return 'days-ok';
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const day = date.getDate();
+            const month = date.getMonth() + 1;
+            const year = date.getFullYear();
+            return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        }
+
+        function showNotification(message, type) {
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
     </script>
 </body>
 </html>
