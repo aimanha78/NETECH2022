@@ -325,6 +325,24 @@
             flex-wrap: wrap;
         }
         
+        /* التعديلات الجديدة */
+        .subscription-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .subscription-input {
+            flex: 1;
+        }
+        
+        .small-button {
+            padding: 8px 15px !important;
+            font-size: 14px !important;
+            width: auto !important;
+            min-width: 100px;
+        }
+        
         @media (max-width: 768px) {
             form {
                 grid-template-columns: 1fr;
@@ -357,6 +375,14 @@
             
             .backup-buttons {
                 flex-direction: column;
+            }
+            
+            .subscription-input-group {
+                flex-direction: column;
+            }
+            
+            .small-button {
+                width: 100% !important;
             }
         }
     </style>
@@ -485,9 +511,9 @@
             <h3>إدارة أسماء الاشتراكات</h3>
             <div class="subscription-list" id="subscriptionList">
             </div>
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <input type="text" id="newSubscriptionName" placeholder="اسم الاشتراك الجديد" style="flex: 1;">
-                <button type="button" onclick="addSubscriptionName()" class="success">إضافة اشتراك</button>
+            <div class="subscription-input-group" style="margin-top: 15px;">
+                <input type="text" id="newSubscriptionName" placeholder="اسم الاشتراك الجديد" class="subscription-input">
+                <button type="button" onclick="addSubscriptionName()" class="success small-button">إضافة اشتراك</button>
             </div>
         </div>
 
@@ -650,6 +676,9 @@ NETECH - עובדים עבורך!`
             renderCustomersTable();
             renderCalendar();
             checkAutoReminders();
+            
+            // محاولة تحميل البيانات من السحابة إذا كانت متاحة
+            loadFromCloud();
         });
 
         // ========== إصلاح زر إضافة أسماء الاشتراكات ==========
@@ -668,6 +697,7 @@ NETECH - עובדים עבורך!`
             
             subscriptionNames.push(newName);
             saveSubscriptionNamesToStorage();
+            saveToCloud(); // حفظ في السحابة
             renderSubscriptionNames();
             newSubscriptionNameInput.value = '';
             showNotification('تم إضافة اسم الاشتراك بنجاح', 'success');
@@ -719,6 +749,7 @@ NETECH - עובדים עבורך!`
                         
                         saveCustomersToStorage();
                         saveSubscriptionNamesToStorage();
+                        saveToCloud(); // حفظ في السحابة
                         renderSubscriptionNames();
                         renderCustomersTable();
                         renderCalendar();
@@ -747,6 +778,7 @@ NETECH - עובדים עבורך!`
                     
                     saveCustomersToStorage();
                     saveSubscriptionNamesToStorage();
+                    saveToCloud(); // حفظ في السحابة
                     renderSubscriptionNames();
                     renderCustomersTable();
                     renderCalendar();
@@ -773,7 +805,7 @@ NETECH - עובדים עבורך!`
                 item.className = 'subscription-item';
                 item.innerHTML = `
                     <span>${name}</span>
-                    <button onclick="removeSubscriptionName(${index})" class="danger" style="padding: 5px 10px; font-size: 12px;">حذف</button>
+                    <button onclick="removeSubscriptionName(${index})" class="danger small-button">حذف</button>
                 `;
                 subscriptionList.appendChild(item);
             });
@@ -783,6 +815,7 @@ NETECH - עובדים עבורך!`
             if (confirm('هل أنت متأكد من حذف هذا الاشتراك؟')) {
                 subscriptionNames.splice(index, 1);
                 saveSubscriptionNamesToStorage();
+                saveToCloud(); // حفظ في السحابة
                 renderSubscriptionNames();
                 showNotification('تم حذف اسم الاشتراك بنجاح', 'success');
             }
@@ -837,6 +870,7 @@ NETECH - עובדים עבורך!`
             }
             
             saveCustomersToStorage();
+            saveToCloud(); // حفظ في السحابة
             renderCustomersTable();
             renderCalendar();
             clearForm();
@@ -899,12 +933,12 @@ NETECH - עובדים עבורך!`
                                onchange="toggleReminder('${customer.id}', 'dailyReminder', this.checked)">
                     </td>
                     <td>
-                        <button onclick="sendWhatsAppMessage('${customer.id}')" class="whatsapp">إرسال واتساب</button>
+                        <button onclick="sendWhatsAppMessage('${customer.id}')" class="whatsapp small-button">إرسال واتساب</button>
                     </td>
                     <td class="actions">
-                        <button onclick="editCustomer('${customer.id}')" class="secondary">تعديل</button>
-                        <button onclick="deleteCustomer('${customer.id}')" class="danger">حذف</button>
-                        <button onclick="renewSubscription('${customer.id}')" class="success">تجديد</button>
+                        <button onclick="editCustomer('${customer.id}')" class="secondary small-button">تعديل</button>
+                        <button onclick="deleteCustomer('${customer.id}')" class="danger small-button">حذف</button>
+                        <button onclick="renewSubscription('${customer.id}')" class="success small-button">تجديد</button>
                     </td>
                 `;
                 customersTableBody.appendChild(row);
@@ -959,6 +993,7 @@ NETECH - עובדים עבורך!`
             if (confirm('هل أنت متأكد من حذف هذا الزبون؟')) {
                 customers = customers.filter(c => c.id !== id);
                 saveCustomersToStorage();
+                saveToCloud(); // حفظ في السحابة
                 renderCustomersTable();
                 renderCalendar();
                 showNotification('تم حذف الزبون بنجاح', 'success');
@@ -972,6 +1007,7 @@ NETECH - עובדים עבורך!`
                 customer.startDate = today;
                 
                 saveCustomersToStorage();
+                saveToCloud(); // حفظ في السحابة
                 renderCustomersTable();
                 renderCalendar();
                 showNotification('تم تجديد الاشتراك بنجاح', 'success');
@@ -983,6 +1019,7 @@ NETECH - עובדים עבורך!`
             if (customer) {
                 customer[type] = value;
                 saveCustomersToStorage();
+                saveToCloud(); // حفظ في السحابة
                 showNotification('تم تحديث إعدادات التذكير', 'success');
             }
         }
@@ -1042,6 +1079,7 @@ NETECH - עובדים עבורך!`
             });
             
             saveCustomersToStorage();
+            saveToCloud(); // حفظ في السحابة
         }
 
         function sendAutoReminder(customer, type, message) {
@@ -1083,6 +1121,7 @@ NETECH - עובדים עבורך!`
             });
             
             saveCustomersToStorage();
+            saveToCloud(); // حفظ في السحابة
             showNotification(`تم إرسال ${remindersSent} تذكير`, 'success');
         }
 
@@ -1119,7 +1158,7 @@ NETECH - עובדים עבורך!`
                         customerElement.className = 'customer-item';
                         customerElement.innerHTML = `
                             <span>${customer.name} - ${customer.subscriptionName || ''}</span>
-                            <button onclick="sendWhatsAppMessage('${customer.id}')" class="whatsapp" style="padding: 4px 8px; font-size: 12px;">إرسال</button>
+                            <button onclick="sendWhatsAppMessage('${customer.id}')" class="whatsapp small-button">إرسال</button>
                         `;
                         dayElement.appendChild(customerElement);
                     });
@@ -1182,6 +1221,111 @@ NETECH - עובדים עבורך!`
             setTimeout(() => {
                 notification.classList.remove('show');
             }, 3000);
+        }
+
+        // ========== دوال التخزين السحابي ==========
+        
+        function saveToCloud() {
+            try {
+                const data = {
+                    customers: customers,
+                    subscriptionNames: subscriptionNames,
+                    lastUpdate: new Date().toISOString()
+                };
+                
+                // استخدام localStorage كبديل للتخزين السحابي
+                // في بيئة حقيقية، يمكن استبدال هذا باستدعاء API
+                localStorage.setItem('netech_cloud_backup', JSON.stringify(data));
+                
+                // يمكنك أيضاً استخدام IndexedDB لتخزين كميات أكبر من البيانات
+                if ('indexedDB' in window) {
+                    saveToIndexedDB(data);
+                }
+                
+            } catch (error) {
+                console.error('خطأ في الحفظ السحابي:', error);
+            }
+        }
+
+        function loadFromCloud() {
+            try {
+                // محاولة تحميل من localStorage أولاً
+                const cloudData = localStorage.getItem('netech_cloud_backup');
+                if (cloudData) {
+                    const data = JSON.parse(cloudData);
+                    
+                    if (data.customers && data.subscriptionNames) {
+                        customers = data.customers;
+                        subscriptionNames = data.subscriptionNames;
+                        
+                        saveCustomersToStorage();
+                        saveSubscriptionNamesToStorage();
+                        renderCustomersTable();
+                        renderCalendar();
+                        renderSubscriptionNames();
+                        
+                        showNotification('تم تحميل البيانات من النسخة الاحتياطية', 'success');
+                    }
+                }
+                
+                // محاولة تحميل من IndexedDB إذا كان متاحاً
+                if ('indexedDB' in window) {
+                    loadFromIndexedDB();
+                }
+                
+            } catch (error) {
+                console.error('خطأ في تحميل البيانات السحابية:', error);
+            }
+        }
+
+        function saveToIndexedDB(data) {
+            const request = indexedDB.open('NetechDB', 1);
+            
+            request.onerror = function(event) {
+                console.error('خطأ في فتح قاعدة البيانات:', event);
+            };
+            
+            request.onsuccess = function(event) {
+                const db = event.target.result;
+                const transaction = db.transaction(['data'], 'readwrite');
+                const store = transaction.objectStore('data');
+                
+                store.put(data, 'netech_data');
+            };
+            
+            request.onupgradeneeded = function(event) {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('data')) {
+                    db.createObjectStore('data');
+                }
+            };
+        }
+
+        function loadFromIndexedDB() {
+            const request = indexedDB.open('NetechDB', 1);
+            
+            request.onsuccess = function(event) {
+                const db = event.target.result;
+                const transaction = db.transaction(['data'], 'readonly');
+                const store = transaction.objectStore('data');
+                const getRequest = store.get('netech_data');
+                
+                getRequest.onsuccess = function() {
+                    if (getRequest.result) {
+                        const data = getRequest.result;
+                        if (data.customers && data.subscriptionNames) {
+                            customers = data.customers;
+                            subscriptionNames = data.subscriptionNames;
+                            
+                            saveCustomersToStorage();
+                            saveSubscriptionNamesToStorage();
+                            renderCustomersTable();
+                            renderCalendar();
+                            renderSubscriptionNames();
+                        }
+                    }
+                };
+            };
         }
     </script>
 </body>
