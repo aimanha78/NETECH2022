@@ -1949,183 +1949,6 @@ NETECH - עובדים עבורך!`
 ////////
 
         
-// دالة لتصحيح مشاكل المزامنة بين الأجهزة
-function fixMultiDeviceLogin() {
-    console.log('فحص إعدادات المزامنة بين الأجهزة...');
-    
-    // التحقق من وجود بيانات المستخدم
-    const currentUser = localStorage.getItem('currentUser');
-    const netechUsers = localStorage.getItem('netech_users');
-    
-    if (currentUser) {
-        console.log('تم العثور على مستخدم محلي:', JSON.parse(currentUser));
-    } else {
-        console.log('لا يوجد مستخدم مسجل دخول محلياً');
-    }
-    
-    if (netechUsers) {
-        console.log('عدد المستخدمين المسجلين:', Object.keys(JSON.parse(netechUsers)).length);
-    }
-    
-    // إصلاح مشاكل التخزين المحلي
-    fixLocalStorageIssues();
-}
-
-// إصلاح مشاكل التخزين المحلي
-function fixLocalStorageIssues() {
-    try {
-        // تنظيف البيانات التالفة
-        const keysToCheck = ['currentUser', 'netech_users', 'customers', 'subscriptionNames'];
-        
-        keysToCheck.forEach(key => {
-            try {
-                const item = localStorage.getItem(key);
-                if (item) {
-                    JSON.parse(item);
-                    console.log(`✅ ${key}: صالح`);
-                }
-            } catch (e) {
-                console.log(`❌ ${key}: تالف - يتم حذفه`);
-                localStorage.removeItem(key);
-            }
-        });
-        
-        // إعادة إنشاء بيانات المستخدم إذا كانت مفقودة
-        recreateUserDataIfNeeded();
-        
-    } catch (error) {
-        console.error('خطأ في إصلاح التخزين:', error);
-    }
-}
-
-// إعادة إنشاء بيانات المستخدم إذا كانت مفقودة
-function recreateUserDataIfNeeded() {
-    const currentUser = localStorage.getItem('currentUser');
-    const netechUsers = localStorage.getItem('netech_users');
-    
-    if (!currentUser && netechUsers) {
-        console.log('جاري استعادة بيانات المستخدم...');
-        const users = JSON.parse(netechUsers);
-        const userEmail = Object.keys(users)[0]; // أخذ أول مستخدم
-        
-        if (userEmail) {
-            const userData = {
-                email: userEmail,
-                uid: users[userEmail].uid
-            };
-            localStorage.setItem('currentUser', JSON.stringify(userData));
-            console.log('✅ تم استعادة بيانات المستخدم');
-        }
-    }
-}
-
-// دالة لتصدير واستيراد البيانات يدوياً بين الأجهزة
-function manualDataTransfer() {
-    const exportData = {
-        customers: JSON.parse(localStorage.getItem('customers')) || [],
-        subscriptionNames: JSON.parse(localStorage.getItem('subscriptionNames')) || [],
-        netechUsers: JSON.parse(localStorage.getItem('netech_users')) || {},
-        exportTime: new Date().toISOString()
-    };
-    
-    const dataStr = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `netech-full-backup-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    showNotification('تم تصدير جميع البيانات بنجاح. قم باستيرادها على الجهاز الآخر.', 'success');
-}
-
-// دالة لاستيراد البيانات الكاملة
-function importFullData(file) {
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const data = JSON.parse(e.target.result);
-            
-            if (confirm('هل أنت متأكد من استيراد جميع البيانات؟ سيتم استبدال كل البيانات الحالية.')) {
-                if (data.customers) localStorage.setItem('customers', JSON.stringify(data.customers));
-                if (data.subscriptionNames) localStorage.setItem('subscriptionNames', JSON.stringify(data.subscriptionNames));
-                if (data.netechUsers) localStorage.setItem('netech_users', JSON.stringify(data.netechUsers));
-                
-                // إعادة تحميل الصفحة
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
-                
-                showNotification('تم استيراد جميع البيانات بنجاح', 'success');
-            }
-        } catch (error) {
-            showNotification('خطأ في استيراد الملف', 'error');
-        }
-    };
-    reader.readAsText(file);
-}
-
-// إضافة زر للتحكم اليدوي في البيانات
-function addManualDataControls() {
-    const backupSection = document.querySelector('.backup-section');
-    
-    const manualControls = document.createElement('div');
-    manualControls.innerHTML = `
-        <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 5px;">
-            <h4>🔄 حلول المزامنة بين الأجهزة</h4>
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
-                <button onclick="fixMultiDeviceLogin()" class="secondary small-button">فحص وإصلاح المشاكل</button>
-                <button onclick="manualDataTransfer()" class="success small-button">تصدير جميع البيانات</button>
-                <button onclick="document.getElementById('fullImportFile').click()" class="primary small-button">استيراد جميع البيانات</button>
-                <button onclick="clearAllUserData()" class="danger small-button">مسح بيانات التسجيل</button>
-            </div>
-            <p style="font-size: 12px; margin-top: 10px; color: #856404;">
-                استخدم هذه الأدوات إذا واجهت مشاكل في تسجيل الدخول على أجهزة مختلفة
-            </p>
-        </div>
-    `;
-    
-    backupSection.appendChild(manualControls);
-    
-    // إضافة عنصر ملف مخفي للاستيراد الكامل
-    const fullImportInput = document.createElement('input');
-    fullImportInput.type = 'file';
-    fullImportInput.id = 'fullImportFile';
-    fullImportInput.accept = '.json';
-    fullImportInput.style.display = 'none';
-    fullImportInput.onchange = (e) => importFullData(e.target.files[0]);
-    document.body.appendChild(fullImportInput);
-}
-
-// مسح بيانات التسجيل فقط
-function clearAllUserData() {
-    if (confirm('هل أنت متأكد من مسح جميع بيانات التسجيل؟ سيتم تسجيل خروجك من جميع الأجهزة.')) {
-        localStorage.removeItem('currentUser');
-        localStorage.removeItem('netech_users');
-        localStorage.removeItem('cloudData_user_');
-        
-        setTimeout(() => {
-            window.location.reload();
-        }, 1000);
-        
-        showNotification('تم مسح بيانات التسجيل. سيتم إعادة تحميل الصفحة.', 'success');
-    }
-}
-
-// تشغيل الإصلاح التلقائي عند تحميل الصفحة
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(() => {
-        addManualDataControls();
-        fixMultiDeviceLogin();
-    }, 2000);
-});
-        
 
     </script>
 </body>
